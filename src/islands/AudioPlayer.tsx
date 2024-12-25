@@ -56,7 +56,7 @@ const [
     Item | null
   >(null);
 
-  createEffect((previous) => {
+  createEffect((previous: ReturnType<typeof makeAudioPlayer> | undefined) => {
     const current = playing();
 
     if (current !== null) {
