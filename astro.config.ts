@@ -1,15 +1,22 @@
-import node from "@astrojs/node";
+// dprint-ignore
+import { 
+  defineConfig
+}               from "astro/config";
 
+// dprint-ignore
+import bun      from "@nurodev/astro-bun";
+
+// dprint-ignore
 import tailwind from "@astrojs/tailwind";
 
-import { defineConfig } from "astro/config";
+// dprint-ignore
+import solidJs  from "@astrojs/solid-js";
 
-import solidJs from "@astrojs/solid-js";
-
+// dprint-ignore
 export default defineConfig({
-  output: "server",
-  integrations: [tailwind(), solidJs()],
-  adapter: node({
-    mode: "standalone",
-  }),
+  output        : "server",
+
+  adapter       : bun(),
+
+  integrations  : [ tailwind(), solidJs() ],
 });
