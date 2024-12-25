@@ -1,0 +1,134 @@
+---
+import { ClientRouter } from "astro:transitions";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+
+    <meta
+      name="viewport"
+
+      content="width=device-width, initial-scale=1"
+    />
+
+    <meta
+      name="description"
+
+      content="A streaming audio player."
+    />
+
+    <title>Mayo</title>
+
+    <ClientRouter />
+
+    <link
+      rel="manifest"
+
+      href="manifest.json"
+    />
+
+    <link
+      rel="icon"
+
+      type="image/png"
+
+      sizes="16x16"
+
+      href="favicon-16x16.png"
+    />
+
+    <link
+      rel="icon"
+
+      type="image/png"
+
+      sizes="32x32"
+
+      href="favicon-32x32.png"
+    />
+
+    <link
+      rel="icon"
+
+      type="image/png"
+
+      sizes="48x48"
+
+      href="favicon-48x48.png"
+    />
+
+    <link
+      rel="icon"
+
+      type="image/png"
+
+      sizes="64x64"
+
+      href="favicon-64x64.png"
+    />
+
+    <link
+      rel="icon"
+
+      type="image/png"
+
+      sizes="128x128"
+
+      href="favicon-128x128.png"
+    />
+
+    <link
+      rel="apple-touch-icon"
+
+      type="image/png"
+
+      sizes="180x180"
+
+      href="apple-touch-icon-180x180.png"
+    />
+
+    <link
+      rel="apple-touch-icon"
+
+      type="image/png"
+
+      sizes="120x120"
+
+      href="apple-touch-icon-120x120.png"
+    />
+
+    <link
+      rel="apple-touch-icon"
+
+      type="image/png"
+
+      sizes="76x76"
+
+      href="apple-touch-icon-76x76.png"
+    />
+
+    <link
+      rel="apple-touch-icon"
+
+      type="image/png"
+
+      sizes="152x152"
+
+      href="apple-touch-icon-152x152.png"
+    />
+  </head>
+  <body>
+    <div
+      class="w-screen bg-zinc-950"
+
+      transition:animate="none"
+    >
+      <div
+        class="min-h-screen p-4 flex flex-col text-xs text-zinc-300 selection:bg-zinc-700"
+      >
+        <slot />
+      </div>
+    </div>
+  </body>
+</html>
