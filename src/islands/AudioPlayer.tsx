@@ -48,6 +48,19 @@ import type {
 // dprint-ignore
 import FadeIn   from "@/components/FadeIn";
 
+const parse_tags = (tags: string) =>
+  Object
+    //
+    .fromEntries(
+      //
+      (JSON.parse(tags) as Array<Array<string>>)
+        //
+        .map(
+          //
+          ([key, value]) => [key.toLowerCase(), value],
+        ),
+    );
+
 const [
   QueueProvider,
 
@@ -75,19 +88,16 @@ const [
       player.play();
 
       if ("mediaSession" in navigator) {
-        const tags = Object.fromEntries(
-          //
-          JSON.parse(current.tags!),
-        );
+        const tags = parse_tags(current.tags!);
 
         // dprint-ignore
         navigator.mediaSession.metadata = new MediaMetadata({
 
-          title   : tags["TITLE"],
+          title   : tags["title"],
 
-          artist  : tags["ARTIST"],
+          artist  : tags["artist"],
 
-          album   : tags["ALBUM"],
+          album   : tags["album"],
 
           artwork : current.has_thumbnail
             ? 
@@ -280,14 +290,11 @@ const Item: Component<Item> = (props) => {
     artist  : string | null   = null;
 
   if (props.tags) {
-    const tags = Object.fromEntries(
-      //
-      JSON.parse(props.tags),
-    );
+    const tags = parse_tags(props.tags);
 
-    artist = tags["ARTIST"];
+    artist = tags["artist"];
 
-    const title = tags["TITLE"];
+    const title = tags["title"];
 
     if (title) {
       label = title;
