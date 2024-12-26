@@ -391,15 +391,19 @@ const Item: Component<Item> = (props) => {
         <div class="line-clamp-1 text-zinc-400">
           {
             // dprint-ignore
-            props.processing === 0 
+            props.processing === 0
 
-              ? props.processing_state === 1 
+              ? props.processing_state === 1
 
                   ? <>Unable to process this file.</> 
 
                   : artist && <>{artist}</> 
+              
+              : artist 
 
-              : <>Processing</>
+                  ? <>{artist}</> 
+
+                  : <>Processing...</>
           }
         </div>
       </div>
