@@ -15,8 +15,9 @@ import {
 
   onCleanup,
 
+  onMount,
+
   Show
-  
 }               from "solid-js";
 
 // dprint-ignore
@@ -33,6 +34,11 @@ import {
 import { 
   createInfiniteScroll
 }               from "@solid-primitives/pagination";
+
+// dprint-ignore
+import { 
+  makeEventListener
+}               from "@solid-primitives/event-listener";
 
 // dprint-ignore
 import type { 
@@ -143,6 +149,16 @@ const AudioPlayer: Component = () => {
     return [{ animate: true, items }];
   });
 
+  onMount(() => {
+    const handleSwap = async () => {
+      const items = await actions.audio.get_page.orThrow(0);
+
+      setPages([{ animate: true, items }]);
+    };
+
+    makeEventListener(document, "astro:after-swap", handleSwap, { passive: true });
+  });
+
   const timers = new Map();
 
   onCleanup(() => {
@@ -182,7 +198,7 @@ const AudioPlayer: Component = () => {
                 })
               );
             } else {
-              if (fresh.processing_state !== item.processing_state) {
+              if (fresh.processing !== item.processing || fresh.processing_state !== item.processing_state) {
                 setPages(pages =>
                   pages.map(page => {
                     const items = page.items.map(previous => previous.id === item.id ? fresh : previous);
@@ -319,7 +335,7 @@ const Item: Component<Item> = (props) => {
       //
       class={
         // dprint-ignore
-        `flex gap-4 mx-2 px-4 py-3 select-none ${(props.processing === 0 && props.processing_state !== 1) ? "cursor-pointer rounded transition hover:bg-zinc-900 active:bg-zinc-800" : ""}`
+        `flex gap-4 mx-2 px-4 py-3 select-none ${(props.processing === 0 && props.processing_state !== 1) ? "cursor-pointer rounded transition hover:bg-zinc-900 active:bg-zinc-800" : "opacity-80"}`
           //
           .trim()
       }

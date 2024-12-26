@@ -61,7 +61,11 @@ if (result && !result.error) {
         </Notice>
       </noscript>
 
-      <AudioPlayer client:only="solid-js" />
+      <AudioPlayer
+        client:only="solid-js"
+
+        transition:persist
+      />
     </div>
   </div>
 </Layout>
