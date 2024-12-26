@@ -384,7 +384,9 @@ export default class AudioProcessor {
 
         ["-c:a", "aac"],
 
-        ["-b:a", "320k"],
+        ["-b:a", "256k"],
+
+        ["-ar", "44100"],
 
         ["-movflags", "+faststart"],
 
