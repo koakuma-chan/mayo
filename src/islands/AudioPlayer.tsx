@@ -393,11 +393,13 @@ const Item: Component<Item> = (props) => {
             // dprint-ignore
             props.processing === 0 
 
-              && props.processing_state === 1
+              ? props.processing_state === 1 
 
-                ? <>Unable to process this file.</>
+                  ? <>Unable to process this file.</> 
 
-                : artist ? <>{artist}</> : <>Processing</>
+                  : artist && <>{artist}</> 
+
+              : <>Processing</>
           }
         </div>
       </div>
