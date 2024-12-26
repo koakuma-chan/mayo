@@ -152,7 +152,7 @@ export default class AudioProcessor {
         return true;
 
       case 3:
-        await this.hls(
+        await this.transcode(
           //
           item,
         );
@@ -369,7 +369,7 @@ export default class AudioProcessor {
       );
   }
 
-  private async hls(item: Item) {
+  private async transcode(item: Item) {
     const proc = Bun.spawn(
       [
         "ffmpeg",
