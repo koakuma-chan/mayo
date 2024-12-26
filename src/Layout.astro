@@ -3,9 +3,11 @@ import { ClientRouter } from "astro:transitions";
 ---
 
 <html
-  lang="en"
+  class="bg-zinc-950"
 
-  style="scrollbar-gutter: stable"
+  style="scrollbar-gutter: stable both-edges; scrollbar-width: thin"
+
+  lang="en"
 >
   <head>
     <meta charset="utf-8" />
@@ -124,15 +126,11 @@ import { ClientRouter } from "astro:transitions";
   </head>
   <body>
     <div
-      class="bg-zinc-950"
+      class="min-h-screen p-4 flex flex-col text-xs text-zinc-300 selection:bg-zinc-700"
 
       transition:animate="none"
     >
-      <div
-        class="min-h-screen p-4 flex flex-col text-xs text-zinc-300 selection:bg-zinc-700"
-      >
-        <slot />
-      </div>
+      <slot />
     </div>
   </body>
 </html>
