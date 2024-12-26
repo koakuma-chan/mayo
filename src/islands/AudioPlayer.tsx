@@ -342,7 +342,7 @@ const Item: Component<Item> = (props) => {
       //
       class={
         // dprint-ignore
-        `flex gap-4 mx-2 px-4 py-3 select-none ${(props.processing === 0 && props.processing_state !== 1) ? "cursor-pointer rounded transition hover:bg-zinc-900 active:bg-zinc-800" : "opacity-80"}`
+        `flex gap-4 mx-2 px-4 py-3 select-none ${(props.processing === 0 && props.processing_state !== 1) ? "cursor-pointer rounded transition hover:bg-zinc-900 active:bg-zinc-800" : "opacity-60"}`
           //
           .trim()
       }
