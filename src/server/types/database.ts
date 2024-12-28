@@ -35,7 +35,5 @@ export type Audio = {
 
   duration: number | null;
 
-  size: number | null;
-
   tags: string | null;
 };

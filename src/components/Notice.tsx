@@ -1,4 +1,6 @@
-import type { ParentComponent } from "solid-js";
+import type {
+  ParentComponent,
+} from "solid-js";
 
 const Notice: ParentComponent = (props) => {
   return (

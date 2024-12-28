@@ -1,11 +1,14 @@
 ---
-import { actions } from "astro:actions";
+import {
+  actions,
+} from "astro:actions";
 
 import Layout from "@/Layout.astro";
 
-import Input from "@/components/Input";
-
-import Button from "@/components/Button";
+import {
+  Button,
+  Input,
+} from "@/components";
 
 const result = Astro.getActionResult(actions.authentication.sign_in);
 

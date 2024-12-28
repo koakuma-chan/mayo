@@ -1,4 +1,8 @@
-import { type Component, type JSX, splitProps } from "solid-js";
+import {
+  type Component,
+  type JSX,
+  splitProps,
+} from "solid-js";
 
 type Props = {
   sx: string;

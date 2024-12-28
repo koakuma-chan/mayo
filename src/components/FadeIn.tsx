@@ -1,4 +1,8 @@
-import { onCleanup, onMount, type ParentComponent } from "solid-js";
+import {
+  onCleanup,
+  onMount,
+  type ParentComponent,
+} from "solid-js";
 
 type Props = {
   duration: number;

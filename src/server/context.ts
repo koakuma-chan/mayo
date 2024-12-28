@@ -1,18 +1,14 @@
-// dprint-ignore
-import type {
-  Database
-}                       from "bun:sqlite";
+import {
+  type Database,
+} from "bun:sqlite";
 
-// dprint-ignore
-import path             from "node:path";
+import path from "node:path";
 
-// dprint-ignore
-import { 
-  connect_and_migrate
-}                       from "@/database";
+import {
+  connect_and_migrate,
+} from "@/server/database";
 
-// dprint-ignore
-import AudioProcessor   from "@/audio_processor";
+import AudioProcessor from "@/server/audio_processor";
 
 // dprint-ignore
 type Context = {

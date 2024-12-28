@@ -1,25 +1,26 @@
-// dprint-ignore
-import { 
+import {
   ActionError,
+  defineAction,
+} from "astro:actions";
 
-  defineAction
-}               from "astro:actions";
+import {
+  z,
+} from "astro:schema";
 
-// dprint-ignore
-import { z }    from "astro:schema";
+import path from "node:path";
 
-// dprint-ignore
-import path     from "node:path";
+import fs from "node:fs/promises";
 
-// dprint-ignore
-import fs       from "node:fs/promises";
+import {
+  Id,
+} from "@/server/types/incoming";
 
-// dprint-ignore
-import { Id }   from "@/types/incoming";
+import {
+  type Audio,
+} from "@/server/types/database";
 
 export type Item = Pick<
-  //
-  import("@/types/database").Audio,
+  Audio,
   //
   | "id"
   //
@@ -32,8 +33,6 @@ export type Item = Pick<
   | "has_thumbnail"
   //
   | "duration"
-  //
-  | "size"
   //
   | "tags"
 >;
@@ -96,27 +95,27 @@ export const audio = {
             .query(`
               insert into audio
 
-              (
-                id, 
+                (
+                  id, 
 
-                uploader_id, 
+                  uploader_id, 
 
-                time_uploaded,
+                  time_uploaded,
 
-                file_name
-              ) 
+                  file_name
+                ) 
 
               values 
 
-              (
-                ?1,
+                (
+                  ?1,
 
-                ?2,
+                  ?2,
 
-                ?3,
+                  ?3,
 
-                ?4
-              );
+                  ?4
+                );
             `)
             //
             .run(
@@ -162,6 +161,7 @@ export const audio = {
         //
         .query(`
           select
+
             id,
 
             file_name,
@@ -174,13 +174,15 @@ export const audio = {
 
             duration,
 
-            size,
-
             tags
 
-          from audio
+          from 
 
-          where id = ?1
+            audio
+
+          where 
+
+            id = ?1
         `)
         //
         .get(input) as Item | null;
@@ -210,6 +212,7 @@ export const audio = {
         //
         .query(`
           select
+
             id,
 
             file_name,
@@ -222,15 +225,23 @@ export const audio = {
 
             duration,
 
-            size,
-
             tags
 
-          from audio
+          from
 
-          order by time_uploaded desc
+            audio
 
-          limit ?1 offset ?2;
+          order by 
+
+            time_uploaded desc
+
+          limit 
+
+            ?1 
+
+          offset 
+
+            ?2;
         `)
         //
         .all(page_size, page_size * input) as Array<Item>;

@@ -1,6 +1,10 @@
-import { audio } from "./audio";
+import {
+  audio,
+} from "./audio";
 
-import { authentication } from "./authentication";
+import {
+  authentication,
+} from "./authentication";
 
 export const server = {
   audio,

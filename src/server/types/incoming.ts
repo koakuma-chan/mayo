@@ -1,4 +1,6 @@
-import { z } from "astro:schema";
+import {
+  z,
+} from "astro:schema";
 
 export const Id = z
   //

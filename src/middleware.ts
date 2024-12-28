@@ -1,89 +1,112 @@
-// dprint-ignore
-import { 
-  defineMiddleware
-}   from "astro:middleware";
+import {
+  defineMiddleware,
+  sequence,
+} from "astro:middleware";
 
-// dprint-ignore
-import { 
-  z
-}   from "astro:schema";
+import {
+  z,
+} from "astro:schema";
 
-// dprint-ignore
-import { 
-  global
-}   from "@/context";
+import {
+  global,
+} from "@/server/context";
 
-// dprint-ignore
-import { 
-  Id
-}   from "@/types/incoming";
+import {
+  sign,
+} from "@/server/crypto";
 
-// dprint-ignore
-import type { 
-  User
-}   from "@/types/database";
+import {
+  Id,
+} from "@/server/types/incoming";
 
-export const onRequest = defineMiddleware((request, next) => {
-  const locals = request.locals;
+import {
+  User,
+} from "@/server/types/database";
 
-  locals.context = global();
+const context =
+  //
+  defineMiddleware((request, next) => {
+    request.locals.context = global();
 
-  // dprint-ignore
-  const authenticate =
-
-        request.url.pathname === "/"
-
-    ||  request.url.pathname.startsWith("/endpoints")
-
-    ||  request.url.pathname.startsWith("/_actions");
-
-  if (!authenticate) {
     return next();
-  }
+  });
 
-  const cookie = request.cookies.get("token");
+const authentication =
+  //
+  defineMiddleware((request, next) => {
+    // dprint-ignore
+    const needs_authentication =
+          request.url.pathname === "/"
 
-  if (!cookie) {
-    return request.redirect("/sign-up");
-  }
+      ||  request.url.pathname.startsWith("/endpoints")
 
-  let payload;
+      ||  request.url.pathname.startsWith("/_actions");
 
-  try {
-    payload = z
+    if (!needs_authentication) {
+      return next();
+    }
+
+    const cookie = request.cookies.get("token");
+
+    if (!cookie) {
+      return request.redirect("/sign-up");
+    }
+
+    const schema = z.object({
+      user_id: Id,
+
+      signature: z.string(),
+    });
+
+    let payload;
+
+    try {
+      payload = schema.parse(cookie.json());
+    } catch (e) {
+      return request.redirect("/sign-up");
+    }
+
+    const {
+      user_id,
+
+      signature,
+    } = payload;
+
+    const {
+      secret,
+
+      database,
+    } = request.locals.context;
+
+    if (signature !== sign(secret, user_id)) {
+      return request.redirect("/sign-up");
+    }
+
+    const user = database
       //
-      .object({
-        user_id: Id,
+      .query(`
+        select
 
-        signature: z.string(),
-      })
+          name
+
+        from 
+
+          users
+
+        where 
+
+          id = ?1;
+      `)
       //
-      .parse(cookie.json());
-  } catch (e) {
-    return request.redirect("/sign-up");
-  }
+      .get(user_id) as Pick<User, "name"> | null;
 
-  const hasher = new Bun.CryptoHasher("blake2b512", locals.context.secret);
+    if (user === null) {
+      return request.redirect("/sign-up");
+    }
 
-  hasher.update(payload.user_id);
+    request.locals.user = { id: user_id, ...user };
 
-  const signature = hasher.digest("hex");
+    return next();
+  });
 
-  if (signature !== payload.signature) {
-    return request.redirect("/sign-up");
-  }
-
-  const user = locals.context.database
-    //
-    .query("select name from users where id = ?1")
-    //
-    .get(payload.user_id) as Pick<User, "name"> | null;
-
-  if (user === null) {
-    return request.redirect("/sign-up");
-  }
-
-  locals.user = { id: payload.user_id, ...user };
-
-  return next();
-});
+export const onRequest = sequence(context, authentication);

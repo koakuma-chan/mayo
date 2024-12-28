@@ -1,6 +1,10 @@
-import { z } from "astro:schema";
+import {
+  z,
+} from "astro:schema";
 
-import type { Database } from "bun:sqlite";
+import type {
+  Database,
+} from "bun:sqlite";
 
 import os from "node:os";
 
@@ -8,7 +12,7 @@ import path from "node:path";
 
 type Item = Pick<
   //
-  import("@/types/database").Audio,
+  import("@/server/types/database").Audio,
   //
   | "id"
   //
@@ -62,22 +66,28 @@ export default class AudioProcessor {
         //
         .query(`
           select
+
             id,
 
             file_name,
 
             processing_state
 
-          from audio
+          from 
+
+            audio
 
           where
+
             processing = 1
 
             and
 
             id not in (${exclude})
 
-          order by time_uploaded;
+          order by 
+
+            time_uploaded;
         `)
         //
         .all() as Item[];
@@ -120,14 +130,18 @@ export default class AudioProcessor {
     this.database
       //
       .query(`
-        update audio 
+        update 
+
+          audio 
 
         set 
           processing        = 0,
 
           processing_state  = 1
 
-        where id = ?1;
+        where 
+
+          id = ?1;
       `)
       //
       .run(item_id);
@@ -178,8 +192,6 @@ export default class AudioProcessor {
           .string()
           //
           .transform(value => Math.round(parseFloat(value))),
-
-        size: z.number({ coerce: true }),
 
         tags: z
           //
@@ -255,18 +267,21 @@ export default class AudioProcessor {
     this.database
       //
       .query(`
-        update audio
+        update 
+
+          audio
+
 
         set
           processing_state  = ?1,
 
           duration          = ?2,
           
-          size              = ?3,
+          tags              = ?3
 
-          tags              = ?4
+        where 
 
-        where id = ?5;
+          id = ?4;
       `)
       //
       .run(
@@ -274,8 +289,6 @@ export default class AudioProcessor {
         has_video ? 2 : 3,
         //
         output.format.duration,
-        //
-        output.format.size,
         //
         output.format.tags,
         //
@@ -308,17 +321,7 @@ export default class AudioProcessor {
 
     let exit_code = await proc.exited;
 
-    for (
-      const size of [
-        "384",
-
-        "256",
-
-        "128",
-
-        "64",
-      ]
-    ) {
+    for (const size of ["384", "256", "128", "64"]) {
       const proc = Bun.spawn(
         [
           "ffmpeg",
@@ -349,14 +352,19 @@ export default class AudioProcessor {
     this.database
       //
       .query(`
-        update audio
+        update 
+
+          audio
 
         set
+
           processing_state  = ?1,
 
           has_thumbnail     = ?2
 
-        where id = ?3;
+        where 
+
+          id = ?3;
       `)
       //
       .run(
@@ -403,13 +411,17 @@ export default class AudioProcessor {
         this.database
           //
           .query(`
-            update audio
+            update 
+
+              audio
 
             set
 
               processing = ?1
 
-            where id = ?2;
+            where 
+
+              id = ?2;
           `)
           //
           .run(

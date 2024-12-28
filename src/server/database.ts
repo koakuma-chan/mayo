@@ -1,4 +1,6 @@
-import { Database } from "bun:sqlite";
+import {
+  Database,
+} from "bun:sqlite";
 
 export const connect_and_migrate = (path: string): Database => {
   const db = new Database(path, {
@@ -55,8 +57,6 @@ export const connect_and_migrate = (path: string): Database => {
             has_thumbnail     integer   not null  default 0,
 
             duration          integer,
-
-            size              integer,
 
             tags              text,
 

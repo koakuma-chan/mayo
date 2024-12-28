@@ -1,25 +1,20 @@
-// dprint-ignore
-import type { 
-  APIRoute
-}             from "astro";
+import {
+  type APIRoute,
+} from "astro";
 
-// dprint-ignore
-import { 
-  z
-}             from "astro:schema";
+import {
+  z,
+} from "astro:schema";
 
-// dprint-ignore
-import path   from "node:path";
+import path from "node:path";
 
-// dprint-ignore
-import { 
-  Id
-}             from "@/types/incoming";
+import {
+  Id,
+} from "@/server/types/incoming";
 
-// dprint-ignore
-import type { 
-  Audio
-}             from "@/types/database";
+import {
+  type Audio,
+} from "@/server/types/database";
 
 export const GET: APIRoute = async ({ url, locals }) => {
   let params;
@@ -30,17 +25,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
       .object({
         id: Id,
 
-        size: z.enum([
-          "512",
-
-          "384",
-
-          "256",
-
-          "128",
-
-          "64",
-        ]),
+        size: z.enum(["512", "384", "256", "128", "64"]),
       })
       //
       .parse(
@@ -58,11 +43,16 @@ export const GET: APIRoute = async ({ url, locals }) => {
     //
     .query(`
       select
+
         has_thumbnail
 
-      from audio
+      from 
 
-      where id = ?1;
+        audio
+
+      where 
+
+        id = ?1;
     `)
     //
     .get(params.id) as Pick<Audio, "has_thumbnail"> | null;

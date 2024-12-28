@@ -1,28 +1,39 @@
-// dprint-ignore
-import { 
+import {
   ActionError,
+  defineAction,
+} from "astro:actions";
 
-  defineAction
-}             from "astro:actions";
+import {
+  z,
+} from "astro:schema";
 
-// dprint-ignore
-import { z }  from "astro:schema";
+import {
+  sign,
+} from "@/server/crypto";
 
-// dprint-ignore
-import { 
+import {
   Id,
-
   Password,
+  Username,
+} from "@/server/types/incoming";
 
-  Username
-}             from "@/types/incoming";
-
-// dprint-ignore
-import type { 
+import type {
   Invite,
+  User,
+} from "@/server/types/database";
 
-  User 
-}             from "@/types/database";
+const make_token = (
+  // dprint-ignore
+  secret  : string,
+  // dprint-ignore
+  user_id : User["id"],
+): string => {
+  return JSON.stringify({
+    user_id,
+
+    signature: sign(secret, user_id),
+  });
+};
 
 export const authentication = {
   sign_in: defineAction({
@@ -56,13 +67,18 @@ export const authentication = {
         //
         .query(`
           select 
+
             id, 
 
             password_hash 
 
-          from users 
+          from 
 
-          where name = ?1
+            users 
+
+          where 
+
+            name = ?1;
         `)
         //
         .get(username) as Pick<User, "id" | "password_hash"> | null;
@@ -87,7 +103,7 @@ export const authentication = {
         });
       }
 
-      return sign(user.id, secret);
+      return make_token(secret, user.id);
     },
   }),
 
@@ -126,20 +142,27 @@ export const authentication = {
       } = input;
 
       // dprint-ignore
-      const user_id       = Bun.randomUUIDv7(),
+      const 
 
-            password_hash = await Bun.password.hash(password);
+        user_id       = Bun.randomUUIDv7(),
+
+        password_hash = await Bun.password.hash(password);
 
       database.transaction(() => {
         const invite = database
           //
           .query(`
             select 
+
               uses 
 
-            from invites 
+            from 
 
-            where id = ?1
+              invites 
+
+            where 
+
+              id = ?1
           `)
           //
           .get(invite_id) as Pick<Invite, "uses"> | null;
@@ -159,23 +182,23 @@ export const authentication = {
             .query(`
               insert into users
 
-              (
-                id,
+                (
+                  id,
 
-                name,
+                  name,
 
-                password_hash
-              ) 
+                  password_hash
+                ) 
 
               values 
 
-              (
-                ?1,
+                (
+                  ?1,
 
-                ?2,
+                  ?2,
 
-                ?3
-              );
+                  ?3
+                );
             `)
             //
             .run(
@@ -206,9 +229,13 @@ export const authentication = {
             database
               //
               .query(`
-                delete from invites 
+                delete from 
 
-                where id = ?1;
+                  invites 
+
+                where 
+
+                  id = ?1;
               `)
               //
               .run(invite_id);
@@ -216,11 +243,17 @@ export const authentication = {
             database
               //
               .query(`
-                update invites 
+                update 
 
-                set uses = ?1 
+                  invites 
 
-                where id = ?2;
+                set 
+
+                  uses  = ?1 
+
+                where 
+
+                  id    = ?2;
               `)
               //
               .run(
@@ -233,26 +266,7 @@ export const authentication = {
         }
       })();
 
-      return sign(user_id, secret);
+      return make_token(secret, user_id);
     },
   }),
-};
-
-const sign = (
-  // dprint-ignore
-  user_id : User["id"],
-  // dprint-ignore
-  secret  : string,
-) => {
-  const hasher = new Bun.CryptoHasher("blake2b512", secret);
-
-  hasher.update(user_id);
-
-  const signature = hasher.digest("hex");
-
-  return JSON.stringify({
-    user_id,
-
-    signature,
-  });
 };

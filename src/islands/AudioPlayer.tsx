@@ -1,65 +1,238 @@
-// dprint-ignore
-import { 
-  actions
-}               from "astro:actions";
+import {
+  actions,
+} from "astro:actions";
 
-// dprint-ignore
-import { 
+import {
   type Component,
-
-  createEffect, 
-
+  createEffect,
   createSignal,
-
   For,
-
   onCleanup,
-
   onMount,
+  Show,
+} from "solid-js";
 
-  Show
-}               from "solid-js";
+import {
+  makeAudioPlayer,
+} from "@solid-primitives/audio";
 
-// dprint-ignore
-import { 
-  createContextProvider
-}               from "@solid-primitives/context";
+import {
+  createContextProvider,
+} from "@solid-primitives/context";
 
-// dprint-ignore
-import { 
-  makeAudioPlayer
-}               from "@solid-primitives/audio";
+import {
+  makeEventListener,
+} from "@solid-primitives/event-listener";
 
-// dprint-ignore
-import { 
-  createInfiniteScroll
-}               from "@solid-primitives/pagination";
+import {
+  createInfiniteScroll,
+} from "@solid-primitives/pagination";
 
-// dprint-ignore
-import { 
-  makeEventListener
-}               from "@solid-primitives/event-listener";
+import {
+  type Item as Audio,
+} from "@/actions/audio";
 
-// dprint-ignore
-import type { 
-  Item
-}               from "@/actions/audio";
+import {
+  FadeIn,
+} from "@/components";
 
 // dprint-ignore
-import FadeIn   from "@/components/FadeIn";
+type Item = {
+  audio     : Audio;
 
-const parse_tags = (tags: string) =>
-  Object
+  duration  : string | undefined;
+
+  artist    : string | undefined;
+
+  album     : string | undefined;
+
+  title     : string | undefined;
+};
+
+const parse_audio = (audio: Audio): Item => {
+  let duration;
+
+  if (audio.duration) {
+    // dprint-ignore
+    const 
+
+      hours     = Math.floor(audio.duration / 3600),
+
+      minutes   = Math.floor((audio.duration % 3600) / 60),
+
+      seconds   = audio.duration % 60;
+
     //
-    .fromEntries(
+    const pad = (num: number) => String(num).padStart(2, "0");
+
+    // dprint-ignore
+    duration = 
+      (
+
+        hours > 0 
+
+          ?
+            `
+              ${pad(hours)}
+              :
+              ${pad(minutes)}
+              :
+              ${pad(seconds)}
+            `
+
+          : 
+
+            `
+              ${pad(minutes)}
+              :
+              ${pad(seconds)}
+            `
+
+      )
+        .replace(/\s+/g, "");
+  }
+
+  // dprint-ignore
+  let 
+
+    artist  , 
+
+    album   , 
+
+    title   ;
+
+  if (audio.tags) {
+    const tags = new Map((JSON.parse(audio.tags) as string[][]).map(([k, v]) => [k.toLowerCase(), v]));
+
+    artist =
       //
-      (JSON.parse(tags) as Array<Array<string>>)
+      tags.get(
+        "artist",
+      );
+
+    album =
+      //
+      tags.get(
+        "album",
+      );
+
+    title =
+      //
+      tags.get(
+        "title",
+      );
+  }
+
+  return {
+    audio,
+
+    duration,
+
+    artist,
+
+    album,
+
+    title,
+  };
+};
+
+type FetcherStrategy = {
+  //
+  fetch_one: (
+    //
+    id: Audio["id"],
+  ) => Promise<Audio | null>;
+
+  //
+  fetch_page: (
+    //
+    index: number,
+  ) => Promise<Audio[]>;
+};
+
+const fetcher_strategy_network: FetcherStrategy = {
+  fetch_one:
+    //
+    (
+      id,
+    ) =>
+      actions.audio.get_one.orThrow(
+        id,
+      ),
+
+  fetch_page:
+    //
+    (
+      index,
+    ) =>
+      actions.audio.get_page.orThrow(
+        index,
+      ),
+};
+
+const fetcher_strategy_offline: FetcherStrategy = {
+  fetch_one:
+    //
+    (
+      id,
+    ) => {
+      throw new Error("unimplemented");
+    },
+
+  fetch_page:
+    //
+    (
+      index,
+    ) => {
+      throw new Error("unimplemented");
+    },
+};
+
+type Fetcher = {
+  //
+  fetch_one: (
+    //
+    id: Audio["id"],
+  ) => Promise<Item | null>;
+
+  //
+  fetch_page: (
+    //
+    index: number,
+  ) => Promise<Item[]>;
+};
+
+const make_fetcher = (strategy: FetcherStrategy): Fetcher => {
+  return {
+    fetch_one: async (
+      id,
+    ) => {
+      const audio =
         //
-        .map(
-          //
-          ([key, value]) => [key.toLowerCase(), value],
-        ),
-    );
+        await strategy.fetch_one(
+          id,
+        );
+
+      return audio
+        //
+        ? parse_audio(audio)
+        //
+        : null;
+    },
+
+    fetch_page: async (
+      index,
+    ) => {
+      const page =
+        //
+        await strategy.fetch_page(
+          index,
+        );
+
+      return page.map(parse_audio);
+    },
+  };
+};
 
 const [
   QueueProvider,
@@ -67,82 +240,106 @@ const [
   use_queue,
 ] = createContextProvider(() => {
   const [
-    playing,
+    current,
 
-    set_playing,
+    set_current,
   ] = createSignal<
     //
     Item | null
   >(null);
 
-  createEffect((previous: ReturnType<typeof makeAudioPlayer> | undefined) => {
-    const current = playing();
+  createEffect(() => {
+    const item = current();
 
-    if (current !== null) {
-      if (previous) {
-        previous.pause();
-      }
-
-      const player = makeAudioPlayer(`/endpoints/audio?id=${current.id}`);
+    if (item) {
+      const player = makeAudioPlayer(`/endpoints/audio?id=${item.audio.id}`);
 
       player.play();
 
-      if ("mediaSession" in navigator) {
-        const tags = parse_tags(current.tags!);
-
-        // dprint-ignore
-        navigator.mediaSession.metadata = new MediaMetadata({
-
-          title   : tags["title"],
-
-          artist  : tags["artist"],
-
-          album   : tags["album"],
-
-          artwork : current.has_thumbnail
-            ? 
-              [
-                {
-                  src: `/endpoints/thumbnail?id=${current.id}&size=64`,
-
-                  sizes: "64x64",
-                },
-
-                {
-                  src: `/endpoints/thumbnail?id=${current.id}&size=128`,
-
-                  sizes: "128x128",
-                },
-
-                {
-                  src: `/endpoints/thumbnail?id=${current.id}&size=256`,
-
-                  sizes: "256x256",
-                },
-
-                {
-                  src: `/endpoints/thumbnail?id=${current.id}&size=512`,
-
-                  sizes: "512x512",
-                },
-              ]
-            :
-              [],
-        });
-      }
-
-      return player;
+      update_media_session(item);
     }
   });
 
-  const replace = (item: Item) => {
-    set_playing(item);
-  };
+  const replace = (item: Item) => set_current(item);
 
   return { replace };
 });
 
+const update_media_session = (item: Item) => {
+  if ("mediaSession" in navigator) {
+    // dprint-ignore
+    navigator.mediaSession.playbackState  = "playing";
+
+    // dprint-ignore
+    navigator.mediaSession.metadata       = new MediaMetadata({
+      title   : item.title  ,
+
+      artist  : item.artist ,
+
+      album   : item.album  ,
+
+      artwork : item.audio.has_thumbnail
+        ?
+          [
+            {
+              src: `/endpoints/thumbnail?id=${item.audio.id}&size=64`,
+
+              sizes: "64x64",
+            },
+
+            {
+              src: `/endpoints/thumbnail?id=${item.audio.id}&size=128`,
+
+              sizes: "128x128",
+            },
+
+            {
+              src: `/endpoints/thumbnail?id=${item.audio.id}&size=256`,
+
+              sizes: "256x256",
+            },
+
+            {
+              src: `/endpoints/thumbnail?id=${item.audio.id}&size=512`,
+
+              sizes: "512x512",
+            },
+          ]
+        :
+          [],
+    });
+  }
+};
+
 const AudioPlayer: Component = () => {
+  const [
+    fetcher,
+
+    set_fetcher,
+  ] = createSignal(
+    make_fetcher(fetcher_strategy_network),
+  );
+
+  // dprint-ignore
+  type page_maybe_fade_in = {
+    fade_in : boolean ;
+
+    page    : Item[]  ;
+  };
+
+  const fetch_page_maybe_fade_in = async (index: number): Promise<page_maybe_fade_in[]> => {
+    const page = await fetcher().fetch_page(index);
+
+    return [
+      // dprint-ignore
+      {
+        fade_in: true ,
+
+        page          ,
+      },
+    ];
+  };
+
   const [
     pages,
 
@@ -153,108 +350,103 @@ const AudioPlayer: Component = () => {
 
       setPages,
     },
-  ] = createInfiniteScroll(async (page) => {
-    const items = await actions.audio.get_page.orThrow(page);
-
-    return [{ animate: true, items }];
-  });
+  ] = createInfiniteScroll<page_maybe_fade_in>(fetch_page_maybe_fade_in);
 
   onMount(() => {
-    const handleSwap = async () => {
-      const items = await actions.audio.get_page.orThrow(0);
+    const handle_swap = async () =>
+      setPages(
+        await fetch_page_maybe_fade_in(0),
+      );
 
-      setPages([{ animate: true, items }]);
-    };
-
-    makeEventListener(document, "astro:after-swap", handleSwap, { passive: true });
+    makeEventListener(document, "astro:after-swap", handle_swap, { passive: true });
   });
 
   const timers = new Map();
 
-  onCleanup(() => {
-    for (const timer of timers.values()) {
-      clearInterval(timer);
-    }
-  });
+  onCleanup(() => timers.forEach(clearInterval));
 
   createEffect(() => {
     pages()
       //
       .flatMap(
-        ({ items }) => items,
+        ({ page }) => page.map(({ audio }) => audio),
       )
       //
       .filter(
-        item => item.processing === 1 && timers.has(item.id) === false,
+        audio => audio.processing === 1 && timers.has(audio.id) === false,
       )
       //
       .forEach(
-        item => {
-          const timer = setInterval(async () => {
-            const fresh = await actions.audio.get_one.orThrow(item.id);
+        audio => {
+          const poll = async () => {
+            const fresh = await fetcher().fetch_one(audio.id);
 
-            if (fresh === null || fresh.processing === 0) {
+            if (fresh === null || fresh.audio.processing === 0) {
               clearInterval(timer);
 
-              timers.delete(item.id);
+              timers.delete(audio.id);
             }
 
             if (fresh === null) {
               setPages(pages =>
-                pages.map(page => {
-                  const items = page.items.filter(previous => item.id !== previous.id);
+                pages.map(({ page }) => {
+                  // dprint-ignore
+                  return {
+                    fade_in : false,
 
-                  return { animate: false, items };
+                    page    : page.filter(previous => audio.id !== previous.audio.id),
+                  };
                 })
               );
             } else {
-              if (fresh.processing !== item.processing || fresh.processing_state !== item.processing_state) {
+              if (
+                fresh.audio.processing !== audio.processing || fresh.audio.processing_state !== audio.processing_state
+              ) {
                 setPages(pages =>
-                  pages.map(page => {
-                    const items = page.items.map(previous => previous.id === item.id ? fresh : previous);
+                  pages.map(({ page }) => {
+                    // dprint-ignore
+                    return {
+                      fade_in : false,
 
-                    return { animate: false, items };
+                      page    : page.map(previous => previous.audio.id === audio.id ? fresh : previous),
+                    };
                   })
                 );
               }
             }
-          }, 1000);
+          };
 
-          timers.set(item.id, timer);
+          const timer = setInterval(poll, 1000);
+
+          timers.set(audio.id, timer);
         },
       );
   });
 
   return (
-    <ol class="grid gap-1">
-      <QueueProvider>
+    <QueueProvider>
+      <ol class="grid gap-1">
         <For each={pages()}>
           {({
-            animate,
+            fade_in,
 
-            items,
+            page,
           }) => (
-            <For each={items}>
-              {(item, index) =>
-                // dprint-ignore
-                animate
-                //
-                ? (
-                  <FadeIn 
-                    //
-                    duration={500} 
-                    //
-                    delay={index() * 20}
-                  >
-                    <Item {...item} />
-                  </FadeIn>
-                )
-                //
-                : (
-                  <>
-                    <Item {...item} />
-                  </>
-                )}
+            <For each={page}>
+              {(item, index) => (
+                fade_in
+                  ? (
+                    <FadeIn
+                      //
+                      duration={500}
+                      //
+                      delay={index() * 20}
+                    >
+                      <Item {...item} />
+                    </FadeIn>
+                  )
+                  : <Item {...item} />
+              )}
             </For>
           )}
         </For>
@@ -266,100 +458,54 @@ const AudioPlayer: Component = () => {
           >
           </div>
         </Show>
-      </QueueProvider>
-    </ol>
+      </ol>
+    </QueueProvider>
   );
 };
 
-const Item: Component<Item> = (props) => {
+const Item: Component<Item> = (item) => {
+  const { audio } = item;
+
   const queue = use_queue();
 
   const handle_click = () => {
     if (queue) {
       const { replace } = queue;
 
-      replace(props);
+      replace(item);
     }
   };
 
   // dprint-ignore
-  let 
+  const disabled = 
+        audio.processing        === 1 
 
-    label   : string          = props.file_name,
-
-    artist  : string | null   = null;
-
-  if (props.tags) {
-    const tags = parse_tags(props.tags);
-
-    artist = tags["artist"];
-
-    const title = tags["title"];
-
-    if (title) {
-      label = title;
-    }
-  }
-
-  const format_duration = (seconds: number) => {
-    // dprint-ignore
-    const 
-
-      hours             = Math.floor(seconds / 3600),
-
-      minutes           = Math.floor((seconds % 3600) / 60),
-
-      remaining_seconds = seconds % 60;
-
-    let result;
-
-    // dprint-ignore
-    const pad           = (num: number) => String(num).padStart(2, "0");
-
-    if (hours > 0) {
-      result = `
-        ${pad(hours)}
-        :
-        ${pad(minutes)}
-        :
-        ${pad(remaining_seconds)}
-      `;
-    } else {
-      result = `
-        ${pad(minutes)}
-        :
-        ${pad(remaining_seconds)}
-      `;
-    }
-
-    return result
-      //
-      .replace(/\s+/g, "");
-  };
+    ||  audio.processing_state  === 1;
 
   return (
     <li
       //
       class={
         // dprint-ignore
-        `flex gap-4 mx-2 px-4 py-3 select-none ${(props.processing === 0 && props.processing_state !== 1) ? "cursor-pointer rounded transition hover:bg-zinc-900 active:bg-zinc-800" : "opacity-60"}`
-          //
-          .trim()
+        `flex gap-4 mx-2 px-4 py-3 select-none ${disabled ? "opacity-60" : "cursor-pointer rounded transition hover:bg-zinc-900 active:bg-zinc-800"}`
       }
       //
-      onClick={handle_click}
+      onClick={
+        //
+        disabled ? undefined : handle_click
+      }
     >
       <div class="w-8 h-8 flex-none">
         {
           //
-          props.has_thumbnail
+          audio.has_thumbnail
             //
             ? (
               <img
                 //
                 class="w-full h-full rounded"
                 //
-                src={`/endpoints/thumbnail?id=${props.id}&size=64`}
+                src={`/endpoints/thumbnail?id=${audio.id}&size=64`}
                 //
                 alt=""
                 //
@@ -385,32 +531,32 @@ const Item: Component<Item> = (props) => {
 
       <div>
         <h1 class="line-clamp-1">
-          {label}
+          {item.title ?? item.audio.file_name}
         </h1>
 
         <div class="line-clamp-1 text-zinc-400">
           {
             // dprint-ignore
-            props.processing === 0
+            audio.processing === 0
 
-              ? props.processing_state === 1
+              ? audio.processing_state === 1
 
                   ? <>Unable to process this file.</> 
 
-                  : artist && <>{artist}</> 
+                  : item.artist && <>{item.artist}</> 
               
-              : artist 
+              : item.artist 
 
-                  ? <>{artist}</> 
+                  ? <>{item.artist}</> 
 
                   : <>Processing...</>
           }
         </div>
       </div>
 
-      {props.duration && (
+      {item.duration && (
         <div class="w-8 h-8 flex-none ml-auto content-center text-center text-zinc-400">
-          {format_duration(props.duration)}
+          {item.duration}
         </div>
       )}
     </li>

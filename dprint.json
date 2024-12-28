@@ -2,6 +2,9 @@
   "markup": {
     "maxAttrsPerLine": 1
   },
+  "typescript": {
+    "importDeclaration.forceMultiLine": "always"
+  },
   "excludes": [
     "**/node_modules",
     "**/*-lock.json"
