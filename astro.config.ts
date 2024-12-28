@@ -1,22 +1,22 @@
-// dprint-ignore
-import { 
-  defineConfig
-}               from "astro/config";
+import {
+  defineConfig,
+} from "astro/config";
 
-// dprint-ignore
-import bun      from "@nurodev/astro-bun";
+import bun from "@nurodev/astro-bun";
 
-// dprint-ignore
-import tailwind from "@astrojs/tailwind";
+import tailwindcss from "@tailwindcss/vite";
 
-// dprint-ignore
-import solidJs  from "@astrojs/solid-js";
+import solidJs from "@astrojs/solid-js";
 
-// dprint-ignore
 export default defineConfig({
-  output        : "server",
+  output: "server",
 
-  adapter       : bun(),
+  adapter: bun(),
 
-  integrations  : [ tailwind(), solidJs() ],
+  integrations: [solidJs()],
+
+  vite: {
+    // @ts-ignore
+    plugins: [tailwindcss()],
+  },
 });

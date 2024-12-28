@@ -14,6 +14,12 @@ import "@fontsource-variable/noto-sans-jp";
   lang="en"
 >
   <head>
+    <style is:global>
+    @import 'tailwindcss';
+    </style>
+
+    <ClientRouter />
+
     <meta charset="utf-8" />
 
     <meta
@@ -29,8 +35,6 @@ import "@fontsource-variable/noto-sans-jp";
     />
 
     <title>Mayo</title>
-
-    <ClientRouter />
 
     <link
       rel="manifest"
