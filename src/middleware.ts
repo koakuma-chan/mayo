@@ -38,7 +38,7 @@ const authentication =
     const needs_authentication =
           request.url.pathname === "/"
 
-      ||  request.url.pathname.startsWith("/endpoints")
+      ||  request.url.pathname === "/endpoints/audio"
 
       ||  request.url.pathname.startsWith("/_actions");
 
