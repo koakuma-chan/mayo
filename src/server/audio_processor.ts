@@ -332,7 +332,7 @@ export default class AudioProcessor {
 
           "-y",
 
-          ["-vf", `crop='if(gt(iw,ih),ih,iw)':'if(gt(iw,ih),ih,iw)',scale=${size}:${size}`],
+          ["-vf", `scale=${size}:${size}`],
 
           `thumbnail-${size}.webp`,
         ]
