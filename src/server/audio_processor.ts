@@ -197,7 +197,9 @@ export default class AudioProcessor {
           //
           .record(z.string())
           //
-          .transform(value => JSON.stringify(Object.entries(value))),
+          .transform(value => JSON.stringify(Object.entries(value)))
+          //
+          .optional(),
       }),
     });
 
@@ -290,7 +292,7 @@ export default class AudioProcessor {
         //
         output.format.duration,
         //
-        output.format.tags,
+        output.format.tags ?? null,
         //
         item.id,
       );
