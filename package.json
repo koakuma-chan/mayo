@@ -12,7 +12,9 @@
     "@solid-primitives/pagination": "^0.3.0",
     "@tailwindcss/vite": "^4.0.0-beta.8",
     "@types/bun": "^1.1.14",
+    "@types/hammerjs": "^2.0.46",
     "astro": "5.1.0",
+    "hammerjs": "^2.0.8",
     "solid-js": "^1.9.3",
     "tailwindcss": "^4.0.0-beta.8",
     "typescript": "^5.7.2"

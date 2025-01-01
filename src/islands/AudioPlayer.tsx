@@ -7,6 +7,7 @@ import {
   createEffect,
   createSignal,
   For,
+  type JSX,
   onCleanup,
   onMount,
   Show,
@@ -18,6 +19,7 @@ import {
 
 import {
   createContextProvider,
+  MultiProvider,
 } from "@solid-primitives/context";
 
 import {
@@ -27,6 +29,8 @@ import {
 import {
   createInfiniteScroll,
 } from "@solid-primitives/pagination";
+
+import Hammer from "hammerjs";
 
 import {
   type Item as Audio,
@@ -234,37 +238,6 @@ const make_fetcher = (strategy: FetcherStrategy): Fetcher => {
   };
 };
 
-const [
-  QueueProvider,
-
-  use_queue,
-] = createContextProvider(() => {
-  const [
-    current,
-
-    set_current,
-  ] = createSignal<
-    //
-    Item | null
-  >(null);
-
-  createEffect(() => {
-    const item = current();
-
-    if (item) {
-      const player = makeAudioPlayer(`/endpoints/audio?id=${item.audio.id}`);
-
-      player.play();
-
-      update_media_session(item);
-    }
-  });
-
-  const replace = (item: Item) => set_current(item);
-
-  return { replace };
-});
-
 const update_media_session = (item: Item) => {
   if ("mediaSession" in navigator) {
     // dprint-ignore
@@ -272,6 +245,7 @@ const update_media_session = (item: Item) => {
 
     // dprint-ignore
     navigator.mediaSession.metadata       = new MediaMetadata({
+
       title   : item.title  ,
 
       artist  : item.artist ,
@@ -311,13 +285,245 @@ const update_media_session = (item: Item) => {
   }
 };
 
-const AudioPlayer: Component = () => {
+const [
+  ContextMenuProvider,
+
+  use_context_menu,
+] = createContextProvider(() => {
+  const [
+    open,
+
+    set_open,
+  ] = createSignal(
+    false,
+  );
+
+  const [
+    position,
+
+    set_position,
+  ] = createSignal(
+    { x: 0, y: 0 },
+  );
+
+  const [
+    item,
+
+    set_item,
+  ] = createSignal<Item | undefined>(
+    undefined,
+  );
+
+  let dialog_ref: HTMLDialogElement | undefined;
+
+  createEffect(() => {
+    const is_open = open();
+
+    if (dialog_ref) {
+      if (is_open) {
+        dialog_ref.showModal();
+      } else {
+        dialog_ref.close();
+      }
+    }
+  });
+
+  createEffect(() => {
+    const { x, y } = position();
+
+    if (dialog_ref) {
+      dialog_ref.style.left = `${x}px`;
+
+      dialog_ref.style.top = `${y}px`;
+    }
+  });
+
+  onMount(() => {
+    const handle_click = (e: MouseEvent) => {
+      if (dialog_ref) {
+        const rect = dialog_ref.getBoundingClientRect();
+
+        // dprint-ignore
+        const is_inside_dialog = 
+
+          rect.top <= e.clientY && e.clientY <= rect.top + rect.height 
+
+          &&  
+
+          rect.left <= e.clientX && e.clientX <= rect.left + rect.width;
+
+        if (!is_inside_dialog) {
+          set_open(false);
+        }
+      }
+    };
+
+    makeEventListener(document, "click", handle_click, { passive: true });
+  });
+
+  const queue = use_definite_queue();
+
+  const menu = [
+    {
+      handle_click: () => (item => item && queue.push_front(item))(item()),
+
+      label: "Play next",
+
+      icon: <path d="M3 10h11v2H3zm0-4h11v2H3zm0 8h7v2H3zm13-1v8l6-4z"></path>,
+    },
+
+    {
+      handle_click: () => (item => item && queue.push_back(item))(item()),
+
+      label: "Add to queue",
+
+      icon: (
+        <path d="M15 6H3v2h12zm0 4H3v2h12zM3 16h8v-2H3zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6z">
+        </path>
+      ),
+    },
+
+    {
+      handle_click: () => {},
+
+      label: "Download",
+
+      icon: <path d="M19 9h-4V3H9v6H5l7 7zM5 18v2h14v-2z"></path>,
+    },
+  ];
+
+  const el = (
+    <dialog
+      //
+      class="truncate backdrop:bg-transparent bg-transparent outline-none text-inherit backdrop-blur-sm rounded transition opacity-0 open:opacity-100 starting:open:opacity-0"
+      //
+      ref={dialog_ref}
+    >
+      <menu class="divide-y divide-zinc-900">
+        <For each={menu}>
+          {item => (
+            <li>
+              <button
+                //
+                class="p-3 flex gap-2 items-center outline-none select-none cursor-pointer transition hover:brightness-125"
+                //
+                on:click={item.handle_click}
+              >
+                <svg
+                  //
+                  class="w-5 h-5 fill-zinc-300"
+                  //
+                  viewBox="0 0 24 24"
+                >
+                  {item.icon}
+                </svg>
+
+                {item.label}
+              </button>
+            </li>
+          )}
+        </For>
+      </menu>
+    </dialog>
+  );
+
+  return {
+    open,
+
+    set_open,
+
+    position,
+
+    set_position,
+
+    item,
+
+    set_item,
+
+    el,
+  };
+});
+
+const use_definite_context_menu = () => use_context_menu()!;
+
+const [
+  QueueProvider,
+
+  use_queue,
+] = createContextProvider(() => {
+  const [
+    current,
+
+    set_current,
+  ] = createSignal<
+    //
+    Item | null
+  >(null);
+
+  let queue = new Array();
+
+  createEffect(() => {
+    const item = current();
+
+    if (item) {
+      const player = makeAudioPlayer(`/endpoints/audio?id=${item.audio.id}`);
+
+      player.play();
+
+      update_media_session(item);
+    }
+  });
+
+  const replace =
+    //
+    (item: Item) => {
+      set_current(item);
+    };
+
+  const push_front =
+    //
+    (item: Item) => {
+      queue = [item, ...queue];
+    };
+
+  const push_back =
+    //
+    (item: Item) => {
+      queue = [...queue, item];
+    };
+
+  return {
+    replace,
+
+    push_front,
+
+    push_back,
+  };
+});
+
+const use_definite_queue = () => use_queue()!;
+
+const AudioPlayer: Component = () => (
+  <MultiProvider
+    values={[
+      QueueProvider,
+
+      ContextMenuProvider,
+    ]}
+  >
+    <List />
+  </MultiProvider>
+);
+
+const List: Component = () => {
   const [
     fetcher,
 
     set_fetcher,
   ] = createSignal(
-    make_fetcher(fetcher_strategy_network),
+    make_fetcher(
+      fetcher_strategy_network,
+    ),
   );
 
   // dprint-ignore
@@ -327,18 +533,21 @@ const AudioPlayer: Component = () => {
     page    : Item[]  ;
   };
 
-  const fetch_page_maybe_fade_in = async (index: number): Promise<page_maybe_fade_in[]> => {
-    const page = await fetcher().fetch_page(index);
+  const fetch_page_maybe_fade_in = //
+    async (index: number): Promise<
+      page_maybe_fade_in[]
+    > => {
+      const page = await fetcher().fetch_page(index);
 
-    return [
-      // dprint-ignore
-      {
-        fade_in: true ,
+      return [
+        // dprint-ignore
+        {
+          fade_in: true ,
 
-        page          ,
-      },
-    ];
-  };
+          page          ,
+        },
+      ];
+    };
 
   const [
     pages,
@@ -350,7 +559,11 @@ const AudioPlayer: Component = () => {
 
       setPages,
     },
-  ] = createInfiniteScroll<page_maybe_fade_in>(fetch_page_maybe_fade_in);
+  ] = createInfiniteScroll<
+    page_maybe_fade_in
+  >(
+    fetch_page_maybe_fade_in,
+  );
 
   onMount(() => {
     const handle_swap = async () =>
@@ -423,8 +636,10 @@ const AudioPlayer: Component = () => {
       );
   });
 
+  const context_menu = use_definite_context_menu();
+
   return (
-    <QueueProvider>
+    <>
       <ol class="grid gap-1">
         <For each={pages()}>
           {({
@@ -433,20 +648,33 @@ const AudioPlayer: Component = () => {
             page,
           }) => (
             <For each={page}>
-              {(item, index) => (
-                fade_in
-                  ? (
-                    <FadeIn
-                      //
-                      duration={500}
-                      //
-                      delay={index() * 20}
-                    >
-                      <Item {...item} />
-                    </FadeIn>
-                  )
-                  : <Item {...item} />
-              )}
+              {(
+                //
+                item,
+                //
+                index,
+              ) => {
+                // dprint-ignore
+                const Wrapper = fade_in
+
+                  ? ({ children }: { children: JSX.Element }) => 
+
+                      <FadeIn duration={750} delay={index() * 25}>
+                        {children}
+                      </FadeIn>
+
+                  : ({ children }: { children: JSX.Element }) => 
+
+                      <>
+                        {children}
+                      </>
+
+                return (
+                  <Wrapper>
+                    <Item {...item} />
+                  </Wrapper>
+                );
+              }}
             </For>
           )}
         </For>
@@ -455,44 +683,95 @@ const AudioPlayer: Component = () => {
           <div
             // @ts-ignore
             ref={setEl}
-          >
-          </div>
+          />
         </Show>
       </ol>
-    </QueueProvider>
+
+      {context_menu.el}
+    </>
   );
 };
 
 const Item: Component<Item> = (item) => {
   const { audio } = item;
 
-  const queue = use_queue();
-
-  const handle_click = () => {
-    if (queue) {
-      const { replace } = queue;
-
-      replace(item);
-    }
-  };
-
   // dprint-ignore
   const disabled = 
+
         audio.processing        === 1 
 
     ||  audio.processing_state  === 1;
 
+  // dprint-ignore
+  const 
+
+    context_menu  = use_definite_context_menu(),
+
+    queue         = use_definite_queue();
+
+  const open_context_menu =
+    //
+    (
+      position: { x: number; y: number },
+    ) => {
+      context_menu.set_item(item);
+
+      context_menu.set_position(position);
+
+      context_menu.set_open(true);
+    };
+
+  const handle_click =
+    //
+    () => queue.replace(item);
+
+  const handle_ref =
+    //
+    (
+      ref: HTMLLIElement,
+    ) => {
+      const hammer = new Hammer(ref, {
+        inputClass: Hammer.TouchInput,
+      });
+
+      onCleanup(() => hammer.destroy());
+
+      hammer.on("press", e => open_context_menu(e.center));
+    };
+
+  const handle_context_menu = (
+    //
+    e: MouseEvent,
+  ) => {
+    e.preventDefault();
+
+    open_context_menu({
+      x: e.clientX,
+
+      y: e.clientY,
+    });
+  };
+
   return (
     <li
-      //
+      // dprint-ignore
       class={
-        // dprint-ignore
-        `flex gap-4 mx-2 px-4 py-3 select-none ${disabled ? "opacity-60" : "cursor-pointer rounded transition hover:bg-zinc-900 active:bg-zinc-800"}`
-      }
+        //
+        `flex gap-4 mx-2 px-4 py-3 select-none ${disabled ? "opacity-60" : "cursor-pointer rounded transition hover:bg-zinc-900 active:bg-zinc-800"}`}
       //
-      onClick={
+      on:click={
         //
         disabled ? undefined : handle_click
+      }
+      //
+      on:contextmenu={
+        //
+        disabled ? undefined : handle_context_menu
+      }
+      //
+      ref={
+        //
+        disabled ? undefined : handle_ref
       }
     >
       <div class="w-8 h-8 flex-none">
@@ -555,7 +834,7 @@ const Item: Component<Item> = (item) => {
       </div>
 
       {item.duration && (
-        <div class="w-8 h-8 flex-none ml-auto content-center text-center text-zinc-400">
+        <div class="w-8 h-8 flex-none ml-auto text-zinc-400 content-center text-center">
           {item.duration}
         </div>
       )}
