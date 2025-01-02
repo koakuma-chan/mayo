@@ -238,53 +238,6 @@ const make_fetcher = (strategy: FetcherStrategy): Fetcher => {
   };
 };
 
-const update_media_session = (item: Item) => {
-  if ("mediaSession" in navigator) {
-    // dprint-ignore
-    navigator.mediaSession.playbackState  = "playing";
-
-    // dprint-ignore
-    navigator.mediaSession.metadata       = new MediaMetadata({
-
-      title   : item.title  ,
-
-      artist  : item.artist ,
-
-      album   : item.album  ,
-
-      artwork : item.audio.has_thumbnail
-        ?
-          [
-            {
-              src: `/endpoints/thumbnail?id=${item.audio.id}&size=64`,
-
-              sizes: "64x64",
-            },
-
-            {
-              src: `/endpoints/thumbnail?id=${item.audio.id}&size=128`,
-
-              sizes: "128x128",
-            },
-
-            {
-              src: `/endpoints/thumbnail?id=${item.audio.id}&size=256`,
-
-              sizes: "256x256",
-            },
-
-            {
-              src: `/endpoints/thumbnail?id=${item.audio.id}&size=512`,
-
-              sizes: "512x512",
-            },
-          ]
-        :
-          [],
-    });
-  }
-};
-
 const [
   ContextMenuProvider,
 
@@ -344,17 +297,11 @@ const [
         const rect = dialog_ref.getBoundingClientRect();
 
         // dprint-ignore
-        const is_inside_dialog = 
-
-          rect.top <= e.clientY && e.clientY <= rect.top + rect.height 
-
-          &&  
-
-          rect.left <= e.clientX && e.clientX <= rect.left + rect.width;
-
-        if (!is_inside_dialog) {
-          set_open(false);
+        if (rect.top <= e.clientY && e.clientY <= rect.top + rect.height && rect.left <= e.clientX && e.clientX <= rect.left + rect.width) {
+          return;
         }
+
+        set_open(false);
       }
     };
 
@@ -363,9 +310,17 @@ const [
 
   const queue = use_definite_queue();
 
-  const menu = [
+  const controls = [
     {
-      handle_click: () => (item => item && queue.push_front(item))(item()),
+      handle_click: () => {
+        const current_item = item();
+
+        if (current_item) {
+          queue.push_next(current_item);
+
+          set_open(false);
+        }
+      },
 
       label: "Play next",
 
@@ -373,7 +328,15 @@ const [
     },
 
     {
-      handle_click: () => (item => item && queue.push_back(item))(item()),
+      handle_click: () => {
+        const current_item = item();
+
+        if (current_item) {
+          queue.push(current_item);
+
+          set_open(false);
+        }
+      },
 
       label: "Add to queue",
 
@@ -400,7 +363,7 @@ const [
       ref={dialog_ref}
     >
       <menu class="divide-y divide-zinc-900">
-        <For each={menu}>
+        <For each={controls}>
           {item => (
             <li>
               <button
@@ -455,49 +418,108 @@ const [
     current,
 
     set_current,
-  ] = createSignal<
-    //
-    Item | null
-  >(null);
+  ] = createSignal(
+    -1,
+  );
 
-  let queue = new Array();
+  const queue = new Array();
 
   createEffect(() => {
-    const item = current();
+    const item = queue[current()];
 
     if (item) {
-      const player = makeAudioPlayer(`/endpoints/audio?id=${item.audio.id}`);
+      const player = makeAudioPlayer(`/endpoints/audio?id=${item.audio.id}`, {
+        ended: () => {
+          const current_index = current();
+
+          if (current_index < queue.length - 1) {
+            play_next();
+          }
+        },
+      });
 
       player.play();
 
-      update_media_session(item);
+      onCleanup(() => player.pause());
+
+      const session = navigator.mediaSession;
+
+      if (session) {
+        const artwork = item.audio.has_thumbnail
+          //
+          ? ["512", "384", "256", "128", "64"]
+            .map(size => {
+              return {
+                src: `/endpoints/thumbnail?id=${item.audio.id}&size=${size}`,
+
+                sizes: `${size}x${size}`,
+              };
+            })
+          //
+          : [];
+
+        // dprint-ignore
+        session.metadata = new MediaMetadata({
+          title   : item.title ?? item.audio.file_name,
+
+          artist  : item.artist,
+
+          album   : item.album,
+
+          artwork : artwork,
+        });
+      }
     }
   });
 
-  const replace =
+  const push =
     //
-    (item: Item) => {
-      set_current(item);
-    };
+    (item: Item) => queue.push(item);
 
-  const push_front =
+  const push_next =
     //
-    (item: Item) => {
-      queue = [item, ...queue];
-    };
+    (item: Item) => queue.splice(current() + 1, 0, item);
 
-  const push_back =
+  const wrap =
     //
-    (item: Item) => {
-      queue = [...queue, item];
-    };
+    (i: number) => ((i % queue.length) + queue.length) % queue.length;
+
+  const play_next =
+    //
+    () => set_current(current => wrap(current + 1));
+
+  const play_previous =
+    //
+    () => set_current(current => wrap(current - 1));
+
+  onMount(() => {
+    const session = navigator.mediaSession;
+
+    if (session) {
+      session.setActionHandler(
+        //
+        "nexttrack",
+        //
+        play_next,
+      );
+
+      session.setActionHandler(
+        //
+        "previoustrack",
+        //
+        play_previous,
+      );
+    }
+  });
 
   return {
-    replace,
+    push,
 
-    push_front,
+    push_next,
 
-    push_back,
+    play_next,
+
+    play_previous,
   };
 });
 
@@ -705,9 +727,17 @@ const Item: Component<Item> = (item) => {
   // dprint-ignore
   const 
 
-    context_menu  = use_definite_context_menu(),
+    queue         = use_definite_queue(),
 
-    queue         = use_definite_queue();
+    context_menu  = use_definite_context_menu();
+
+  const handle_click =
+    //
+    () => {
+      queue.push_next(item);
+
+      queue.play_next();
+    };
 
   const open_context_menu =
     //
@@ -720,11 +750,6 @@ const Item: Component<Item> = (item) => {
 
       context_menu.set_open(true);
     };
-
-  const handle_click =
-    //
-    () => queue.replace(item);
-
   const handle_ref =
     //
     (
